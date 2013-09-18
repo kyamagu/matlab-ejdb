@@ -15,8 +15,10 @@ Launch matlab, add a path to `matlab-ejdb`, and use `ejdb.make` command.
     addpath matlab-ejdb;
     ejdb.make
 
-If you have a local ejdb package, you can link statically.
+If you have a local ejdb package, you can link statically. Assuming the package
+is located at `/path/to/ejdb`:
 
+    !make -C /path/to/ejdb
     ejdb.make('--libtcejdb_path', '/path/to/ejdb/tcejdb/libtcejdb.a', ...
               '-I/path/to/ejdb/tcejdb');
 
