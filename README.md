@@ -10,7 +10,7 @@ _Required tools/system libraries:_
  * Matlab
  * EJDB C library libtcejdb-dev
 
-Launch matlab, add a path to `ejdb-matlab`, and use `ejdb.make` command.
+Launch matlab, add a path to `matlab-ejdb`, and use `ejdb.make` command.
 
     addpath matlab-ejdb;
     ejdb.make
