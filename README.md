@@ -12,7 +12,7 @@ _Required tools/system libraries:_
 
 Launch matlab, add a path to `ejdb-matlab`, and use `ejdb.make` command.
 
-    addpath ejdb-matlab
+    addpath matlab-ejdb;
     ejdb.make
 
 If you have a local ejdb package, you can link statically.
@@ -24,7 +24,7 @@ If you have a local ejdb package, you can link statically.
 One snippet intro
 -----------------
 
-    addpath ejdb-matlab
+    addpath matlab-ejdb;
 
     db_id = ejdb.open('zoo');
 
