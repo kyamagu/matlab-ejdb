@@ -2,7 +2,7 @@ function value = load(collection, id, varargin)
 %LOAD Loads documents identified by id from a collection.
 %
 %    value = ejdb.load(collection, id)
-%    value = ejdb.load(database_id, collection, id)
+%    value = ejdb.load(database, collection, id)
 %
 % Sample:
 %
@@ -10,7 +10,7 @@ function value = load(collection, id, varargin)
 %
 % Parameters:
 %
-%    - `database_id` Database handle. The last opened database is used when
+%    - `database` Database handle. The last opened database is used when
 %      skpped.
 %    - `collection` Collection name.
 %    - `id` Document object id (`_id` property).

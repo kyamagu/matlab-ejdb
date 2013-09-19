@@ -3,8 +3,8 @@ function results = find(collection, query, varargin)
 %
 %    results = ejdb.find(collection, query)
 %    results = ejdb.find(collection, query, hints)
-%    results = ejdb.find(database_id, collection, query)
-%    results = ejdb.find(database_id, collection, query, hints)
+%    results = ejdb.find(database, collection, query)
+%    results = ejdb.find(database, collection, query, hints)
 %
 % Sample:
 %
@@ -15,7 +15,7 @@ function results = find(collection, query, varargin)
 %
 % Parameters:
 %
-%    - `database_id` Database handle. The last opened database is used when
+%    - `database` Database handle. The last opened database is used when
 %      skpped.
 %    - `collection` Collection name.
 %    - `query` Main query object.

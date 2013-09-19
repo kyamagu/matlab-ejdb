@@ -3,8 +3,8 @@ function num_updates = update(collection, query, varargin)
 %
 %    num_updates = ejdb.update(collection, query)
 %    num_updates = ejdb.update(collection, query, hints)
-%    num_updates = ejdb.update(database_id, collection, query)
-%    num_updates = ejdb.update(database_id, collection, query, hints)
+%    num_updates = ejdb.update(database, collection, query)
+%    num_updates = ejdb.update(database, collection, query, hints)
 %
 % Returns:
 %

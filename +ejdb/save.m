@@ -2,7 +2,7 @@ function object_id = save(collection, value, varargin)
 %SAVE Save/update specified documents into collection.
 %
 %    object_id = ejdb.save(collection, value, ...)
-%    object_id = ejdb.save(database_id, collection, value, ...)
+%    object_id = ejdb.save(database, collection, value, ...)
 %    object_ids = ejdb.save(collection, value1, value2, ...)
 %
 % Samples:

@@ -3,8 +3,8 @@ function num_objects = count(collection, query, varargin)
 %
 %    num_objects = ejdb.count(collection, query)
 %    num_objects = ejdb.count(collection, query, hints)
-%    num_objects = ejdb.count(database_id, collection, query)
-%    num_objects = ejdb.count(database_id, collection, query, hints)
+%    num_objects = ejdb.count(database, collection, query)
+%    num_objects = ejdb.count(database, collection, query, hints)
 %
 % Returns:
 %

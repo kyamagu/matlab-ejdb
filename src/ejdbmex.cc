@@ -57,6 +57,7 @@ bool Database::save(const char* collection_name,
                                       &collection_options);
   if (!collection)
     return false;
+  // TODO: merge option.
   if (!ejdbsavebson(collection, value, &oid))
     return false;
   bson_oid_to_string(&oid, buffer);

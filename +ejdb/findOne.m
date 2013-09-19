@@ -3,8 +3,8 @@ function result = findOne(collection, query, varargin)
 %
 %    result = ejdb.findOne(collection, query)
 %    result = ejdb.findOne(collection, query, hints)
-%    result = ejdb.findOne(database_id, collection, query)
-%    result = ejdb.findOne(database_id, collection, query, hints)
+%    result = ejdb.findOne(database, collection, query)
+%    result = ejdb.findOne(database, collection, query, hints)
 %
 % See also ejdb
   result = libejdbmex(mfilename, collection, query, varargin{:});

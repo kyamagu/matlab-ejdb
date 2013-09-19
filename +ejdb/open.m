@@ -21,6 +21,10 @@ function database = open(filename, varargin)
 %        LCKNB - Lock without blocking.
 %        TSYNC - Synchronize every transaction.
 %
+% Returns:
+%
+%    Database handle.
+%
 % See also ejdb
   database = libejdbmex(mfilename, filename, varargin{:});
 end
