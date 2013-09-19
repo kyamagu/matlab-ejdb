@@ -20,6 +20,67 @@ using mex::VariableInputArguments;
 
 namespace {
 
+/// Parse database input in the arguments.
+int ParseDatabaseInput(int nrhs,
+                       const mxArray *prhs[],
+                       Database** database) {
+  if (!database) {
+    ERROR("Null pointer.");
+  }
+  int index = 0;
+  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
+                    MxArray(prhs[index++]).toInt() : 0;
+  *database = Session<Database>::get(database_id);
+  if (!(*database)) {
+    ERROR("No open database found.");
+  }
+  return index;
+}
+
+/// Parse collection input in the arguments.
+int ParseCollectionInput(int nrhs,
+                         const mxArray *prhs[],
+                         EJCOLL** collection,
+                         Database** database) {
+  int index = ParseDatabaseInput(nrhs, prhs, database);
+  string collection_name = MxArray(prhs[index++]).toString();
+  *collection = (*database)->getMutableCollection(collection_name.c_str());
+  return index;
+}
+
+/// Common query operation interface.
+void QueryOperation(int nlhs,
+                    mxArray *plhs[],
+                    int nrhs,
+                    const mxArray *prhs[],
+                    int flags) {
+  CheckInputArguments(2, 4, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  Database* database;
+  EJCOLL* collection;
+  int index = ParseCollectionInput(nrhs, prhs, &collection, &database);
+  bson query, hints;
+  if (!ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &query))
+    ERROR(bson_first_errormsg(&query));
+  bool with_hints = false;
+  if (index < nrhs) {
+    if (ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &hints))
+      with_hints = true;
+    else
+      ERROR(bson_first_errormsg(&hints));
+  }
+  if (!database->find(collection,
+                      &query,
+                      (with_hints) ? &hints : NULL,
+                      &plhs[0],
+                      flags))
+    ERROR("Failed to query: %s", database->errorMessage());
+  bson_destroy(&query);
+  if (with_hints)
+    bson_destroy(&hints);
+}
+
+/// Common setIndex operation interface.
 void SetIndexOperation(int nlhs,
                        mxArray *plhs[],
                        int nrhs,
@@ -27,15 +88,11 @@ void SetIndexOperation(int nlhs,
                        int flags) {
   CheckInputArguments(2, 3, nrhs);
   CheckOutputArguments(0, 0, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
-  string collection_name = MxArray(prhs[index++]).toString();
+  Database* database;
+  EJCOLL* collection;
+  int index = ParseCollectionInput(nrhs, prhs, &collection, &database);
   string path = MxArray(prhs[index++]).toString();
-  if (!database->setIndex(collection_name.c_str(), path.c_str(), flags)) {
+  if (!ejdbsetindex(collection, path.c_str(), flags)) {
     ERROR("Failed to set index: %s", database->errorMessage());
   }
 }
@@ -74,6 +131,16 @@ MEX_FUNCTION(open) (int nlhs,
   plhs[0] = MxArray(database_id).getMutable();
 }
 
+MEX_FUNCTION(isopen) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  int database_id = (nrhs > 0) ? MxArray(prhs[0]).toInt() : 0;
+  plhs[0] = mxCreateLogicalScalar(Session<Database>::is_valid(database_id));
+}
+
 MEX_FUNCTION(close) (int nlhs,
                      mxArray *plhs[],
                      int nrhs,
@@ -95,12 +162,8 @@ MEX_FUNCTION(ensureCollection) (int nlhs,
                                 const mxArray *prhs[]) {
   CheckInputArguments(1, 1024, nrhs);
   CheckOutputArguments(0, 0, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
+  Database* database;
+  int index = ParseDatabaseInput(nrhs, prhs, &database);
   string collection_name = MxArray(prhs[index++]).toString();
   VariableInputArguments options;
   options.set("LARGE",         false);
@@ -114,9 +177,11 @@ MEX_FUNCTION(ensureCollection) (int nlhs,
     options["RECORDS"].toDouble(),
     options["CACHEDRECORDS"].toInt()
   };
-  if (!database->createCollection(collection_name.c_str(),
-                                  &collection_options)) {
-    ERROR("Failed to create a collection: %s", database->errorMessage());
+  EJCOLL* collection = ejdbcreatecoll(database->getMutable(),
+                                      collection_name.c_str(),
+                                      &collection_options);
+  if (!collection) {
+    ERROR(database->errorMessage());
   }
 }
 
@@ -126,19 +191,16 @@ MEX_FUNCTION(dropCollection) (int nlhs,
                               const mxArray *prhs[]) {
   CheckInputArguments(1, 1024, nrhs);
   CheckOutputArguments(0, 0, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
+  Database* database;
+  int index = ParseDatabaseInput(nrhs, prhs, &database);
   string collection_name = MxArray(prhs[index++]).toString();
   VariableInputArguments options;
   options.set("UNLINK", true);
   options.update(prhs + index, prhs + nrhs);
-  if (!database->removeCollection(collection_name.c_str(), 
-                                  options["UNLINK"].toBool())) {
-    ERROR("Failed to remove a collection: %s", database->errorMessage());
+  if (!ejdbrmcoll(database->getMutable(),
+                  collection_name.c_str(),
+                  options["UNLINK"].toBool())) {
+    ERROR(database->errorMessage());
   }
 }
 
@@ -148,12 +210,8 @@ MEX_FUNCTION(save) (int nlhs,
                     const mxArray *prhs[]) {
   CheckInputArguments(2, 1024, nrhs);
   CheckOutputArguments(0, 1, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
+  Database* database;
+  int index = ParseDatabaseInput(nrhs, prhs, &database);
   string collection_name = MxArray(prhs[index++]).toString();
   int num_objects = nrhs - index;
   plhs[0] = mxCreateCellMatrix(1, num_objects);
@@ -163,7 +221,7 @@ MEX_FUNCTION(save) (int nlhs,
       ERROR(bson_first_errormsg(&value));
     string object_id;
     if (!database->save(collection_name.c_str(), &value, &object_id))
-      ERROR("Failed to save: %s", database->errorMessage());
+      ERROR(database->errorMessage());
     bson_destroy(&value);
     mxSetCell(plhs[0], i, MxArray(object_id).getMutable());
   }
@@ -180,21 +238,19 @@ MEX_FUNCTION(load) (int nlhs,
                     const mxArray *prhs[]) {
   CheckInputArguments(1, 2, nrhs);
   CheckOutputArguments(0, 1, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
-  string collection_name = MxArray(prhs[index++]).toString();
+  Database* database;
+  EJCOLL* collection;
+  int index = ParseCollectionInput(nrhs, prhs, &collection, &database);
   string object_id = MxArray(prhs[index++]).toString();
   bson* value;
-  if (!database->load(collection_name.c_str(), object_id.c_str(), &value)) {
-    ERROR("Failed to load: %s", database->errorMessage());
+  if (database->load(collection, object_id.c_str(), &value)) {
+    if (!ConvertBSONToMxArray(value, &plhs[0])) {
+      ERROR(bson_first_errormsg(value));
+    }
+    bson_del(value);
   }
-  if (!ConvertBSONToMxArray(value, &plhs[0]))
-    ERROR("Failed to convert bson.");
-  bson_del(value);
+  else
+    plhs[0] = mxCreateCellMatrix(0, 0);
 }
 
 MEX_FUNCTION(remove) (int nlhs,
@@ -203,16 +259,12 @@ MEX_FUNCTION(remove) (int nlhs,
                       const mxArray *prhs[]) {
   CheckInputArguments(1, 2, nrhs);
   CheckOutputArguments(0, 0, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
-  string collection_name = MxArray(prhs[index++]).toString();
+  Database* database;
+  EJCOLL* collection;
+  int index = ParseCollectionInput(nrhs, prhs, &collection, &database);
   string object_id = MxArray(prhs[index++]).toString();
-  if (!database->remove(collection_name.c_str(), object_id.c_str())) {
-    ERROR("Failed to remove: %s", database->errorMessage());
+  if (!database->remove(collection, object_id.c_str())) {
+    ERROR(database->errorMessage());
   }
 }
 
@@ -220,33 +272,21 @@ MEX_FUNCTION(find) (int nlhs,
                     mxArray *plhs[],
                     int nrhs,
                     const mxArray *prhs[]) {
-  CheckInputArguments(2, 4, nrhs);
-  CheckOutputArguments(0, 1, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
-  string collection_name = MxArray(prhs[index++]).toString();
-  bson query, hints;
-  if (!ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &query))
-    ERROR(bson_first_errormsg(&query));
-  bool with_hints = false;
-  if (index < nrhs) {
-    if (ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &hints))
-      with_hints = true;
-    else
-      ERROR(bson_first_errormsg(&hints));
-  }
-  if (!database->find(collection_name.c_str(),
-                      &query,
-                      (with_hints) ? &hints : NULL,
-                      &plhs[0]))
-    ERROR("Failed to find: %s", database->errorMessage());
-  bson_destroy(&query);
-  if (with_hints)
-    bson_destroy(&hints);
+  QueryOperation(nlhs, plhs, nrhs, prhs, 0);
+}
+
+MEX_FUNCTION(findOne) (int nlhs,
+                       mxArray *plhs[],
+                       int nrhs,
+                       const mxArray *prhs[]) {
+  QueryOperation(nlhs, plhs, nrhs, prhs, JBQRYFINDONE);
+}
+
+MEX_FUNCTION(count) (int nlhs,
+                     mxArray *plhs[],
+                     int nrhs,
+                     const mxArray *prhs[]) {
+  QueryOperation(nlhs, plhs, nrhs, prhs, JBQRYCOUNT);
 }
 
 MEX_FUNCTION(update) (int nlhs,
@@ -255,13 +295,9 @@ MEX_FUNCTION(update) (int nlhs,
                       const mxArray *prhs[]) {
   CheckInputArguments(2, 4, nrhs);
   CheckOutputArguments(0, 1, nlhs);
-  int index = 0;
-  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
-                    MxArray(prhs[index++]).toInt() : 0;
-  Database* database = Session<Database>::get(database_id);
-  if (!database)
-    ERROR("No open database found.");
-  string collection_name = MxArray(prhs[index++]).toString();
+  Database* database;
+  EJCOLL* collection;
+  int index = ParseCollectionInput(nrhs, prhs, &collection, &database);
   bson query, hints;
   if (!ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &query))
     ERROR(bson_first_errormsg(&query));
@@ -272,12 +308,7 @@ MEX_FUNCTION(update) (int nlhs,
     else
       ERROR(bson_first_errormsg(&hints));
   }
-  uint32_t num_updates = 0;
-  if (!database->update(collection_name.c_str(),
-                        &query,
-                        (with_hints) ? &hints : NULL,
-                        &num_updates))
-    ERROR("Failed to update: %s", database->errorMessage());
+  uint32_t num_updates = ejdbupdate(collection, &query, NULL, 0, &hints, NULL);
   bson_destroy(&query);
   if (with_hints)
     bson_destroy(&hints);
@@ -380,6 +411,95 @@ MEX_FUNCTION(dropArrayIndex) (int nlhs,
                               int nrhs,
                               const mxArray *prhs[]) {
   SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXARR | JBIDXDROP);
+}
+
+MEX_FUNCTION(sync) (int nlhs,
+                    mxArray *plhs[],
+                    int nrhs,
+                    const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 0, nlhs);
+  Database* database;
+  ParseDatabaseInput(nrhs, prhs, &database);
+  if (!ejdbsyncdb(database->getMutable())) {
+    ERROR(database->errorMessage());
+  }
+}
+
+MEX_FUNCTION(begintx) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 0, nlhs);
+  Database* database;
+  EJCOLL* collection;
+  ParseCollectionInput(nrhs, prhs, &collection, &database);
+  if (!ejdbtranbegin(collection)) {
+    ERROR(database->errorMessage());
+  }
+}
+
+MEX_FUNCTION(commitx) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 0, nlhs);
+  Database* database;
+  EJCOLL* collection;
+  ParseCollectionInput(nrhs, prhs, &collection, &database);
+  if (!ejdbtrancommit(collection)) {
+    ERROR(database->errorMessage());
+  }
+}
+
+MEX_FUNCTION(abortx) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 0, nlhs);
+  Database* database;
+  EJCOLL* collection;
+  ParseCollectionInput(nrhs, prhs, &collection, &database);
+  if (!ejdbtranabort(collection)) {
+    ERROR(database->errorMessage());
+  }
+}
+
+MEX_FUNCTION(isactivetx) (int nlhs,
+                          mxArray *plhs[],
+                          int nrhs,
+                          const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  Database* database;
+  EJCOLL* collection;
+  ParseCollectionInput(nrhs, prhs, &collection, &database);
+  bool status = false;
+  if (!ejdbtranstatus(collection, &status)) {
+    ERROR(database->errorMessage());
+  }
+  plhs[0] = MxArray(status).getMutable();
+}
+
+MEX_FUNCTION(dbmeta) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(0, 1, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  Database* database;
+  ParseDatabaseInput(nrhs, prhs, &database);
+  bson* value = ejdbmeta(database->getMutable());
+  if (!value) {
+    ERROR(database->errorMessage());
+  }
+  if (!ConvertBSONToMxArray(value, &plhs[0])) {
+    ERROR(bson_first_errormsg(value));
+  }
+  bson_del(value);
 }
 
 MEX_FUNCTION(encodeBSON) (int nlhs,

@@ -21,6 +21,8 @@ public:
   /// Retrieve an instance. When special id=0 is specified, it returns default
   /// instance or NULL if there is no instance.
   static T* get(int id);
+  /// Check if the given id exists.
+  static bool is_valid(int id);
   /// Get session instances.
   static const std::map<int, T>& get_const_instances();
 
@@ -59,6 +61,15 @@ T* Session<T>::get(int id) {
     mexErrMsgIdAndTxt("mex:instanceNotFound",
                       "Invalid id %d. Did you open?", id);
   return &instance->second;
+}
+
+template <typename T>
+bool Session<T>::is_valid(int id) {
+  std::map<int, T>* instances = get_instances();
+  if (id == 0)
+    return !instances->empty();
+  typename std::map<int, T>::iterator instance = instances->find(id);
+  return instance != instances->end();
 }
 
 template <typename T>

@@ -8,6 +8,14 @@ Database::Database() : database_(NULL) {}
 
 Database::~Database() {}
 
+EJCOLL* Database::getMutableCollection(const char* collection_name) {
+  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
+  if (!collection) {
+    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
+  }
+  return collection;
+}
+
 bool Database::open(const char* filename, int mode) {
   if (isOpen()) {
     WARNING("Closing existing connection.");
@@ -43,7 +51,7 @@ bool Database::save(const char* collection_name,
                     string* object_id) {
   bson_oid_t oid;
   char buffer[1024];
-  EJCOLLOPTS collection_options = {false, false, 128 * 1024.0, 0};
+  EJCOLLOPTS collection_options = {false, false, 65535, 0};
   EJCOLL* collection = ejdbcreatecoll(database_,
                                       collection_name,
                                       &collection_options);
@@ -56,58 +64,33 @@ bool Database::save(const char* collection_name,
   return true;
 }
 
-bool Database::load(const char* collection_name,
-                    const char* object_id,
-                    bson** value) {
-  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
-  if (!collection) {
-    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
-    return false;
-  }
+bool Database::load(EJCOLL* collection, const char* object_id, bson** value) {
   bson_oid_t oid;
   bson_oid_from_string(&oid, object_id);
   *value = ejdbloadbson(collection, &oid);
   return *value != NULL;
 }
 
-bool Database::remove(const char* collection_name, const char* object_id) {
-  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
-  if (!collection) {
-    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
-    return false;
-  }
+bool Database::remove(EJCOLL* collection, const char* object_id) {
   bson_oid_t oid;
   bson_oid_from_string(&oid, object_id);
   return ejdbrmbson(collection, &oid);
 }
 
-bool Database::createCollection(const char* collection_name,
-                                EJCOLLOPTS* collection_options) {
-  EJCOLL* collection = ejdbcreatecoll(database_,
-                                      collection_name,
-                                      collection_options);
-  return collection != NULL;
-}
-
-bool Database::removeCollection(const char* collection_name, 
-                                bool unlinkfile) {
-  return ejdbrmcoll(database_, collection_name, unlinkfile);
-}
-
-bool Database::find(const char* collection_name,
+bool Database::find(EJCOLL* collection,
                     bson* query,
                     bson* hints,
-                    mxArray** results) {
-  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
-  if (!collection) {
-    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
-    return false;
-  }
+                    mxArray** results,
+                    int flags) {
   EJQ* ejdb_query = ejdbcreatequery(database_, query, NULL, 0, hints);
   if (!ejdb_query)
     return false;
   uint32_t num_results;
-  EJQRESULT result_list = ejdbqryexecute(collection, ejdb_query, &num_results, 0, NULL);
+  EJQRESULT result_list = ejdbqryexecute(collection,
+                                         ejdb_query,
+                                         &num_results,
+                                         flags,
+                                         NULL);
   if (!result_list) {
     ejdbquerydel(ejdb_query);
     return false;
@@ -135,32 +118,6 @@ bool Database::find(const char* collection_name,
   ejdbquerydel(ejdb_query);
   TryMergeCellToNDArray(results);
   return true;
-}
-
-bool Database::update(const char* collection_name,
-                      bson* query,
-                      bson* hints,
-                      uint32_t* num_updates) {
-  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
-  if (!collection) {
-    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
-    return false;
-  }
-  uint32_t num_updates_ = ejdbupdate(collection, query, NULL, 0, hints, NULL);
-  if (num_updates)
-    *num_updates = num_updates_;
-  return true;
-}
-
-bool Database::setIndex(const char* collection_name,
-                        const char* ipath,
-                        int flags) {
-  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
-  if (!collection) {
-    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
-    return false;
-  }
-  return ejdbsetindex(collection, ipath, flags);
 }
 
 } // namespace ejdbmex
