@@ -105,7 +105,7 @@ MEX_FUNCTION(ensureCollection) (int nlhs,
   VariableInputArguments options;
   options.set("LARGE",         false);
   options.set("COMPRESSED",    false);
-  options.set("RECORDS",       128 * 1024.0);
+  options.set("RECORDS",       65535);
   options.set("CACHEDRECORDS", 0);
   options.update(prhs + index, prhs + nrhs);
   EJCOLLOPTS collection_options = {

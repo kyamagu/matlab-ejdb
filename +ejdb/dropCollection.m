@@ -1,11 +1,9 @@
-function dropCollection(collection_name, varargin)
-%DROPCOLLECTION Open or creating a new collection.
+function dropCollection(collection, varargin)
+%DROPCOLLECTION Removes database collection.
 %
-%    ejdb.dropCollection(collection_name, ...)
-%    ejdb.dropCollection(id, collection_name, ...)
+%    ejdb.dropCollection(collection, ...)
+%    ejdb.dropCollection(id, collection, ...)
 %
-% The function destroys an existing collection.
-%
-% See also ejdb.open ejdb.close ejdb.ensureCollection
-  libejdbmex(mfilename, collection_name, varargin{:});
+% See also ejdb
+  libejdbmex(mfilename, collection, varargin{:});
 end

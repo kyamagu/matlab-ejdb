@@ -3,8 +3,14 @@ function value = decodeBSON(bson, varargin)
 %
 %    value = ejdb.decodeBSON(bson, ...)
 %
-% The function converts a bson format to a matlab value.
+% Parameters:
 %
-% See also ejdb.encodeBSON
+%    - `bson` BSON encoded binary.
+%
+% Returns:
+%
+%    Decoded Matlab value.
+%
+% See also ejdb
   value = libejdbmex(mfilename, bson, varargin{:});
 end
