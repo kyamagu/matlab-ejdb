@@ -249,6 +249,41 @@ MEX_FUNCTION(find) (int nlhs,
     bson_destroy(&hints);
 }
 
+MEX_FUNCTION(update) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(2, 4, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  int index = 0;
+  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
+                    MxArray(prhs[index++]).toInt() : 0;
+  Database* database = Session<Database>::get(database_id);
+  if (!database)
+    ERROR("No open database found.");
+  string collection_name = MxArray(prhs[index++]).toString();
+  bson query, hints;
+  if (!ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &query))
+    ERROR(bson_first_errormsg(&query));
+  bool with_hints = false;
+  if (index < nrhs) {
+    if (ConvertMxArrayToBSON(prhs[index++], BSON_FLAG_QUERY_MODE, &hints))
+      with_hints = true;
+    else
+      ERROR(bson_first_errormsg(&hints));
+  }
+  uint32_t num_updates = 0;
+  if (!database->update(collection_name.c_str(),
+                        &query,
+                        (with_hints) ? &hints : NULL,
+                        &num_updates))
+    ERROR("Failed to update: %s", database->errorMessage());
+  bson_destroy(&query);
+  if (with_hints)
+    bson_destroy(&hints);
+  plhs[0] = MxArray(static_cast<double>(num_updates)).getMutable();
+}
+
 MEX_FUNCTION(dropIndexes) (int nlhs,
                            mxArray *plhs[],
                            int nrhs,

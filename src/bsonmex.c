@@ -252,6 +252,17 @@ static bool ConvertCellArrayToBSON(const mxArray* input,
   return true;
 }
 
+/** Check if oid is given.
+ */
+static bool ConvertStringToOID(const mxArray* element,
+                               bson* output) {
+  char* value = mxArrayToString(element);
+  bson_oid_t oid;
+  bson_oid_from_string(&oid, value);
+  mxFree(value);
+  return bson_append_oid(output, "_id", &oid) == BSON_OK;
+}
+
 /** Convert struct mxArray to BSON array.
  */
 static bool ConvertStructArrayToBSON(const mxArray* input,
@@ -265,8 +276,17 @@ static bool ConvertStructArrayToBSON(const mxArray* input,
     for (int i = 0; i < num_fields; ++i) {
       mxArray* element = mxGetFieldByNumber(input, 0, i);
       const char* field_name = mxGetFieldNameByNumber(input, i);
-      if (!ConvertArrayToBSON(element, field_name, output))
-        return false;
+      // Convert string to OID only if a scalar struct with id field.
+      if (name == NULL &&
+          strcmp(field_name, "id") == 0 &&
+          mxIsChar(element) &&
+          mxGetNumberOfElements(element) == 12) {
+        if (!ConvertStringToOID(element, output))
+          return false;
+      }
+      else
+        if (!ConvertArrayToBSON(element, field_name, output))
+          return false;
     }
     if (name && bson_append_finish_object(output) != BSON_OK)
       return false;

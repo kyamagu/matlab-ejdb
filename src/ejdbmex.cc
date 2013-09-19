@@ -137,6 +137,21 @@ bool Database::find(const char* collection_name,
   return true;
 }
 
+bool Database::update(const char* collection_name,
+                      bson* query,
+                      bson* hints,
+                      uint32_t* num_updates) {
+  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
+  if (!collection) {
+    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
+    return false;
+  }
+  uint32_t num_updates_ = ejdbupdate(collection, query, NULL, 0, hints, NULL);
+  if (num_updates)
+    *num_updates = num_updates_;
+  return true;
+}
+
 bool Database::setIndex(const char* collection_name,
                         const char* ipath,
                         int flags) {

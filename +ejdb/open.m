@@ -1,33 +1,26 @@
-function id = open(filename, varargin)
+function database = open(filename, varargin)
 %OPEN Open a database.
 %
-%    id = ejdb.open(filename, ...)
+%    database = ejdb.open(filename, option1, option2,...)
 %
-% The function opens a database session for the given db file.
+% Samples:
 %
-% ## Options
+%    database = ejdb.open('foo')
+%    database = ejdb.open('foo', 'READER')
+%    database = ejdb.open('foo', 'WRITER', 'CREAT', 'TRUNC')
 %
-% _READER_ [false]
-% Open as a reader.
+% Parameters:
+%    - `filename` Database file path.
+%    - `optionN` List of options. By default, 'WRITER' and 'CREAT' is given.
+%      If any option is specified, default values are all `false`.
+%        READER - Open as a reader.
+%        WRITER - Open as a writer.
+%        CREAT - Create db if it not exists.
+%        TRUNC - Truncate db.
+%        NOLCK - Open without locking.
+%        LCKNB - Lock without blocking.
+%        TSYNC - Synchronize every transaction.
 %
-% _WRITER_ [true]
-% Open as a writer.
-%
-% _CREAT_ [true]
-% Create db if it not exists.
-%
-% _TRUNC_ [false]
-% Truncate db.
-%
-% _NOLCK_ [false]
-% Open without locking.
-%
-% _LCKNB_ [false]
-% Lock without blocking.
-%
-% _TSYNC_ [false]
-% Synchronize every transaction.
-%
-% See also ejdb.close
-  id = libejdbmex(mfilename, filename, varargin{:});
+% See also ejdb
+  database = libejdbmex(mfilename, filename, varargin{:});
 end

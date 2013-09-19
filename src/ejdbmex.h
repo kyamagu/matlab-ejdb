@@ -64,10 +64,20 @@ public:
             bson* query,
             bson* hints,
             mxArray** results);
-  /// Create a column handle.
+  /// Update objects.
+  /// @param collection_name name of the collection in which to query.
+  /// @param query bson query object.
+  /// @param hints bson query hint object.
+  /// @param num_updates number of updated records.
+  /// @return true if success.
+  bool update(const char* collection_name,
+              bson* query,
+              bson* hints,
+              uint32_t* num_updates);
+  /// Create a collection.
   bool createCollection(const char* collection_name,
                         EJCOLLOPTS* collection_options);
-  /// Remove a column handle.
+  /// Remove a collection.
   bool removeCollection(const char* collection_name,
                         bool unlinkfile);
   /// Set index.

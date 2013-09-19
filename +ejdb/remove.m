@@ -1,11 +1,9 @@
 function remove(collection, id, varargin)
-%REMOVE Remove an object from a collection.
+%REMOVE Removes from collection the document identified by id.
 %
-%    ejdb.remove(collection, id, ...)
-%    ejdb.remove(database_id, collection, id, ...)
+%    ejdb.remove(collection, id)
+%    ejdb.remove(database_id, collection, id)
 %
-% The function removes an object from a collection with a given id.
-%
-% See also ejdb.open ejdb.close
+% See also ejdb
   libejdbmex(mfilename, collection, id, varargin{:});
 end
