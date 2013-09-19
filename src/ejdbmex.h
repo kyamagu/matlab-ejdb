@@ -49,6 +49,11 @@ public:
   /// @param value bson value to be loaded. Must be freed with bson_del().
   /// @return true if success.
   bool load(const char* collection_name, const char* object_id, bson** value);
+  /// Remove a BSON object.
+  /// @param collection_name name of the collection to save.
+  /// @param object_id object id to be removed.
+  /// @return true if success.
+  bool remove(const char* collection_name, const char* object_id);
   /// Query objects.
   /// @param collection_name name of the collection in which to query.
   /// @param query bson query object.

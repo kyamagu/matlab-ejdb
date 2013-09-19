@@ -177,6 +177,25 @@ MEX_FUNCTION(load) (int nlhs,
   bson_del(value);
 }
 
+MEX_FUNCTION(remove) (int nlhs,
+                      mxArray *plhs[],
+                      int nrhs,
+                      const mxArray *prhs[]) {
+  CheckInputArguments(1, 2, nrhs);
+  CheckOutputArguments(0, 0, nlhs);
+  int index = 0;
+  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
+                    MxArray(prhs[index++]).toInt() : 0;
+  Database* database = Session<Database>::get(database_id);
+  if (!database)
+    ERROR("No open database found.");
+  string collection_name = MxArray(prhs[index++]).toString();
+  string object_id = MxArray(prhs[index++]).toString();
+  if (!database->remove(collection_name.c_str(), object_id.c_str())) {
+    ERROR("Failed to remove: %s", database->errorMessage());
+  }
+}
+
 MEX_FUNCTION(find) (int nlhs,
                     mxArray *plhs[],
                     int nrhs,

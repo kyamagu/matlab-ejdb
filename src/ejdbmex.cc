@@ -70,6 +70,17 @@ bool Database::load(const char* collection_name,
   return *value != NULL;
 }
 
+bool Database::remove(const char* collection_name, const char* object_id) {
+  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
+  if (!collection) {
+    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
+    return false;
+  }
+  bson_oid_t oid;
+  bson_oid_from_string(&oid, object_id);
+  return ejdbrmbson(collection, &oid);
+}
+
 bool Database::createCollection(const char* collection_name,
                                 EJCOLLOPTS* collection_options) {
   EJCOLL* collection = ejdbcreatecoll(database_,
