@@ -154,6 +154,29 @@ MEX_FUNCTION(save) (int nlhs,
   }
 }
 
+MEX_FUNCTION(load) (int nlhs,
+                    mxArray *plhs[],
+                    int nrhs,
+                    const mxArray *prhs[]) {
+  CheckInputArguments(1, 2, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  int index = 0;
+  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
+                    MxArray(prhs[index++]).toInt() : 0;
+  Database* database = Session<Database>::get(database_id);
+  if (!database)
+    ERROR("No open database found.");
+  string collection_name = MxArray(prhs[index++]).toString();
+  string object_id = MxArray(prhs[index++]).toString();
+  bson* value;
+  if (!database->load(collection_name.c_str(), object_id.c_str(), &value)) {
+    ERROR("Failed to load: %s", database->errorMessage());
+  }
+  if (!ConvertBSONToMxArray(value, &plhs[0]))
+    ERROR("Failed to convert bson.");
+  bson_del(value);
+}
+
 MEX_FUNCTION(find) (int nlhs,
                     mxArray *plhs[],
                     int nrhs,
