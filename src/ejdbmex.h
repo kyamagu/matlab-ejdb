@@ -70,6 +70,8 @@ public:
   /// Remove a column handle.
   bool removeCollection(const char* collection_name,
                         bool unlinkfile);
+  /// Set index.
+  bool setIndex(const char* collection_name, const char* ipath, int flags);
 
 private:
   /// Database pointer.

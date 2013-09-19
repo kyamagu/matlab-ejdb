@@ -20,6 +20,26 @@ using mex::VariableInputArguments;
 
 namespace {
 
+void SetIndexOperation(int nlhs,
+                       mxArray *plhs[],
+                       int nrhs,
+                       const mxArray *prhs[],
+                       int flags) {
+  CheckInputArguments(2, 3, nrhs);
+  CheckOutputArguments(0, 0, nlhs);
+  int index = 0;
+  int database_id = (nrhs > 0 && MxArray(prhs[index]).isNumeric()) ?
+                    MxArray(prhs[index++]).toInt() : 0;
+  Database* database = Session<Database>::get(database_id);
+  if (!database)
+    ERROR("No open database found.");
+  string collection_name = MxArray(prhs[index++]).toString();
+  string path = MxArray(prhs[index++]).toString();
+  if (!database->setIndex(collection_name.c_str(), path.c_str(), flags)) {
+    ERROR("Failed to set index: %s", database->errorMessage());
+  }
+}
+
 MEX_FUNCTION(open) (int nlhs,
                     mxArray *plhs[],
                     int nrhs,
@@ -227,6 +247,104 @@ MEX_FUNCTION(find) (int nlhs,
   bson_destroy(&query);
   if (with_hints)
     bson_destroy(&hints);
+}
+
+MEX_FUNCTION(dropIndexes) (int nlhs,
+                           mxArray *plhs[],
+                           int nrhs,
+                           const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXDROPALL);
+}
+
+MEX_FUNCTION(optimizeIndexes) (int nlhs,
+                               mxArray *plhs[],
+                               int nrhs,
+                               const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXOP);
+}
+
+MEX_FUNCTION(ensureStringIndex) (int nlhs,
+                                 mxArray *plhs[],
+                                 int nrhs,
+                                 const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXSTR);
+}
+
+MEX_FUNCTION(rebuildStringIndex) (int nlhs,
+                                  mxArray *plhs[],
+                                  int nrhs,
+                                  const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXSTR | JBIDXREBLD);
+}
+
+MEX_FUNCTION(dropStringIndex) (int nlhs,
+                               mxArray *plhs[],
+                               int nrhs,
+                               const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXSTR | JBIDXDROP);
+}
+
+MEX_FUNCTION(ensureIStringIndex) (int nlhs,
+                                  mxArray *plhs[],
+                                  int nrhs,
+                                  const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXISTR);
+}
+
+MEX_FUNCTION(rebuildIStringIndex) (int nlhs,
+                                   mxArray *plhs[],
+                                   int nrhs,
+                                   const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXISTR | JBIDXREBLD);
+}
+
+MEX_FUNCTION(dropIStringIndex) (int nlhs,
+                                mxArray *plhs[],
+                                int nrhs,
+                                const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXISTR | JBIDXDROP);
+}
+
+MEX_FUNCTION(ensureNumberIndex) (int nlhs,
+                                 mxArray *plhs[],
+                                 int nrhs,
+                                 const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXNUM);
+}
+
+MEX_FUNCTION(rebuildNumberIndex) (int nlhs,
+                                  mxArray *plhs[],
+                                  int nrhs,
+                                  const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXNUM | JBIDXREBLD);
+}
+
+MEX_FUNCTION(dropNumberIndex) (int nlhs,
+                               mxArray *plhs[],
+                               int nrhs,
+                               const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXNUM | JBIDXDROP);
+}
+
+MEX_FUNCTION(ensureArrayIndex) (int nlhs,
+                                mxArray *plhs[],
+                                int nrhs,
+                                const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXARR);
+}
+
+MEX_FUNCTION(rebuildArrayIndex) (int nlhs,
+                                 mxArray *plhs[],
+                                 int nrhs,
+                                 const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXARR | JBIDXREBLD);
+}
+
+MEX_FUNCTION(dropArrayIndex) (int nlhs,
+                              mxArray *plhs[],
+                              int nrhs,
+                              const mxArray *prhs[]) {
+  SetIndexOperation(nlhs, plhs, nrhs, prhs, JBIDXARR | JBIDXDROP);
 }
 
 MEX_FUNCTION(encodeBSON) (int nlhs,

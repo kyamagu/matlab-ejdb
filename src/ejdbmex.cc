@@ -137,6 +137,17 @@ bool Database::find(const char* collection_name,
   return true;
 }
 
+bool Database::setIndex(const char* collection_name,
+                        const char* ipath,
+                        int flags) {
+  EJCOLL* collection = ejdbgetcoll(database_, collection_name);
+  if (!collection) {
+    ERROR("%s: %s", ejdberrmsg(JBEINVALIDCOLNAME), collection_name);
+    return false;
+  }
+  return ejdbsetindex(collection, ipath, flags);
+}
+
 } // namespace ejdbmex
 
 namespace mex {
