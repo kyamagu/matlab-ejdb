@@ -72,3 +72,9 @@ end
 
 ejdb.close(db_id);
 ```
+
+Note
+----
+
+ * Datetime is not properly handled yet.
+ * Sparse array is not supported.

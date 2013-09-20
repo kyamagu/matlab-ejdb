@@ -1,5 +1,6 @@
 /** mxArray BSON encoder implementation.
  *
+ * TODO: Proper date/timestamp conversion.
  * TODO: Implement sparse array conversion.
  *
  * Kota Yamaguchi 2013
@@ -1196,7 +1197,12 @@ static mxArray* ConvertNextToMxArray(bson_iterator* it) {
     case BSON_INT:
       element = mxCreateDoubleScalar(bson_iterator_int(it));
       break;
-    case BSON_DATE:
+    case BSON_DATE:{
+      bson_date_t date_value = bson_iterator_date(it);
+      time_t time_value = date_value;
+      element = mxCreateString(ctime(&time_value));
+      break;
+    }
     case BSON_TIMESTAMP: {
       time_t time_value = bson_iterator_time_t(it);
       element = mxCreateString(ctime(&time_value));
