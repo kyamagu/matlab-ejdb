@@ -1,6 +1,10 @@
 Embedded JSON database Matlab binding
 =====================================
 
+EJDB - Embedded JSON Database engine
+
+http://ejdb.org
+
 Build
 -----
 
@@ -12,22 +16,26 @@ _Required tools/system libraries:_
 
 Launch matlab, add a path to `matlab-ejdb`, and use `ejdb.make` command.
 
-    addpath matlab-ejdb;
-    ejdb.make
+```Matlab
+addpath /path/to/matlab-ejdb;
+ejdb.make
+```
 
 If you have a local ejdb package, you can link statically. Assuming the package
 is located at `/path/to/ejdb`:
 
-    !make -C /path/to/ejdb
-    ejdb.make('--libtcejdb_path', '/path/to/ejdb/tcejdb/libtcejdb.a', ...
-              '-I/path/to/ejdb/tcejdb');
+```Matlab
+!make -C /path/to/ejdb
+ejdb.make('--libtcejdb_path', '/path/to/ejdb/tcejdb/libtcejdb.a', ...
+          '-I/path/to/ejdb/tcejdb');
+```
 
 
 One snippet intro
 -----------------
 
 ```Matlab
-addpath matlab-ejdb;
+addpath /path/to/matlab-ejdb;
 
 db_id = ejdb.open('zoo');
 
