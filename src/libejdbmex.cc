@@ -3,10 +3,8 @@
 /// Kota Yamaguchi 2013
 
 #include "bsonmex.h"
-#include <cstring>
 #include "ejdb.h"
 #include "ejdbmex.h"
-#include <memory>
 #include "mex/arguments.h"
 #include "mex/function.h"
 #include "mex/mxarray.h"
@@ -500,28 +498,6 @@ MEX_FUNCTION(dbmeta) (int nlhs,
     ERROR(bson_first_errormsg(value));
   }
   bson_del(value);
-}
-
-MEX_FUNCTION(encodeBSON) (int nlhs,
-                          mxArray *plhs[],
-                          int nrhs,
-                          const mxArray *prhs[]) {
-  CheckInputArguments(1, 2, nrhs);
-  CheckOutputArguments(0, 1, nlhs);
-  VariableInputArguments options;
-  options.set("QUERY", false);
-  options.update(prhs + 1, prhs + nrhs);
-  int flags = (options["QUERY"].toBool()) ? BSON_FLAG_QUERY_MODE : 0;
-  EncodeBSON(prhs[0], flags, &plhs[0]);
-}
-
-MEX_FUNCTION(decodeBSON) (int nlhs,
-                          mxArray *plhs[],
-                          int nrhs,
-                          const mxArray *prhs[]) {
-  CheckInputArguments(1, 1, nrhs);
-  CheckOutputArguments(0, 1, nlhs);
-  DecodeBSON(prhs[0], &plhs[0]);
 }
 
 } // namespace

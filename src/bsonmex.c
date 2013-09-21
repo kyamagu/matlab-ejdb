@@ -205,6 +205,42 @@ static bool ConvertDoubleArrayToBSON(const mxArray* input,
   return true;
 }
 
+/** Convert mxArray to BSON date array.
+ */
+static bool ConvertDateArrayToBSON(const mxArray* input,
+                                   const char* name,
+                                   bson* output) {
+  char key[16];
+  size_t num_elements = mxGetNumberOfElements(input);
+  if (num_elements == 0)
+    return bson_append_null(output, (name) ? name : "0") == BSON_OK;
+  if (num_elements == 1) {
+    mxArray* value = mxGetProperty(input, 0, "number");
+    if (!value)
+      return false;
+    bson_date_t date_value = (bson_date_t)(
+        (mxGetScalar(value) - 719529) * 86400);
+    return bson_append_date(output, (name) ? name : "0", date_value) ==
+           BSON_OK;
+  }
+  if (name && bson_append_start_array(output, name) != BSON_OK)
+    return false;
+  for (int i = 0; i < num_elements; ++i) {
+    if (sprintf(key, "%d", i) < 0)
+      return false;
+    mxArray* value = mxGetProperty(input, i, "number");
+    if (!value)
+      return false;
+    bson_date_t date_value = (bson_date_t)(
+      (mxGetScalar(value) - 719529) * 86400);
+    if (bson_append_date(output, key, date_value) != BSON_OK)
+      return false;
+  }
+  if (name && bson_append_finish_array(output) != BSON_OK)
+    return false;
+  return true;
+}
+
 /** Return true if the input is a query cell array.
  */
 static bool CheckQueryCellArray(const mxArray* input) {
@@ -393,10 +429,10 @@ static mxArray* ConvertNDArrayToCellArray(const mxArray* input,
                stride);
         break;
       }
+      case mxOBJECT_CLASS:
       case mxVOID_CLASS:
       case mxFUNCTION_CLASS:
       case mxOPAQUE_CLASS:
-      case mxOBJECT_CLASS:
       default:
         return NULL;
     }
@@ -500,10 +536,10 @@ static mxArray* Convert2DArrayToCellArray(const mxArray* input,
         }
         break;
       }
+      case mxOBJECT_CLASS:
       case mxVOID_CLASS:
       case mxFUNCTION_CLASS:
       case mxOPAQUE_CLASS:
-      case mxOBJECT_CLASS:
       default:
         return NULL;
     }
@@ -519,8 +555,9 @@ static mxArray* Convert2DArrayToCellArray(const mxArray* input,
 static mxArray* Convert2DOrNDArrayToCellArray(const mxArray* input) {
   mwSize ndims = mxGetNumberOfDimensions(input);
   const mwSize* dims = mxGetDimensions(input);
-  if (ndims <= 2 && (dims[0] <= 1 || dims[1] <= 1))
+  if (ndims <= 2 && (dims[0] <= 1 || dims[1] <= 1)) {
     return (mxArray*)input;
+  }
   else if (ndims == 2)
     return Convert2DArrayToCellArray(input, ndims, dims);
   else
@@ -570,11 +607,15 @@ static bool ConvertArrayToBSON(const mxArray* input,
     case mxSINGLE_CLASS:
       return ConvertFloatArrayToBSON(array, name, output);
       break;
+    case mxOBJECT_CLASS:
     case mxVOID_CLASS:
     case mxFUNCTION_CLASS:
     case mxOPAQUE_CLASS:
-    case mxOBJECT_CLASS:
     default:
+      if (mxIsClass(input, "bson.date")) {
+        return ConvertDateArrayToBSON(array, name, output);
+        break;        
+      }
       return false;
   }
   if (array != input)
@@ -1199,13 +1240,14 @@ static mxArray* ConvertNextToMxArray(bson_iterator* it) {
       break;
     case BSON_DATE:{
       bson_date_t date_value = bson_iterator_date(it);
-      time_t time_value = date_value;
-      element = mxCreateString(ctime(&time_value));
+      double date_number = ((double)date_value / 86400.0) + 719529;
+      element = mxCreateDoubleScalar(date_number);
       break;
     }
     case BSON_TIMESTAMP: {
       time_t time_value = bson_iterator_time_t(it);
-      element = mxCreateString(ctime(&time_value));
+      double date_number = ((double)time_value / 86400.0) + 719529;
+      element = mxCreateDoubleScalar(date_number);
       break;
     }
     case BSON_LONG:
