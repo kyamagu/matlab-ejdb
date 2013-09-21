@@ -500,4 +500,26 @@ MEX_FUNCTION(dbmeta) (int nlhs,
   bson_del(value);
 }
 
+MEX_FUNCTION(command) (int nlhs,
+                       mxArray *plhs[],
+                       int nrhs,
+                       const mxArray *prhs[]) {
+  CheckInputArguments(1, 2, nrhs);
+  CheckOutputArguments(0, 1, nlhs);
+  Database* database;
+  int index = ParseDatabaseInput(nrhs, prhs, &database);
+  bson command;
+  if (!ConvertMxArrayToBSON(prhs[index++], 0, &command)) {
+    ERROR(bson_first_errormsg(&command));
+  }
+  bson* response = ejdbcommand(database->getMutable(), &command);
+  if (!response) {
+    ERROR(database->errorMessage());
+  }
+  if (!ConvertBSONToMxArray(response, &plhs[0])) {
+    ERROR(bson_first_errormsg(response));
+  }
+  bson_del(response);
+}
+
 } // namespace
