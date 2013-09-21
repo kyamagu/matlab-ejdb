@@ -26,7 +26,7 @@ is located at `/path/to/ejdb`:
 
 ```Matlab
 !make -C /path/to/ejdb
-ejdb.make('--libtcejdb_path', '/path/to/ejdb/tcejdb/libtcejdb.a', ...
+ejdb.make('--libtcejdb-path', '/path/to/ejdb/tcejdb/libtcejdb.a', ...
           '-I/path/to/ejdb/tcejdb');
 ```
 
