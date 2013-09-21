@@ -1,6 +1,5 @@
 /** mxArray BSON encoder implementation.
  *
- * TODO: Proper date/timestamp conversion.
  * TODO: Implement sparse array conversion.
  *
  * Kota Yamaguchi 2013
@@ -1101,6 +1100,30 @@ static void MergeStructArrays(mxArray** array) {
   *array = new_array;
 }
 
+/** Merge cell array of bson.date arrays to an N-D date array.
+ */
+static void MergeDateArrays(mxArray** array) {
+  int size = mxGetNumberOfElements(*array);
+  mxArray* element = mxGetCell(*array, 0);
+  mxClassID class_id = mxGetClassID(element);
+  mwSize ndims = mxGetNumberOfDimensions(element);
+  const mwSize* dims = mxGetDimensions(element);
+  if (ndims < 2)
+    return;
+  mxArray* new_array = NULL;
+  int dimension = (ndims == 2 && dims[0] == 1 && dims[1] == 1) ? 2 :
+                  (ndims == 2 && dims[0] == 1) ? 1 : ndims;
+  mxArray** rhs = (mxArray**)mxMalloc(sizeof(mxArray*) * (1 + size));
+  rhs[0] = mxCreateDoubleScalar(2);
+  for (int i = 0; i < size; ++i)
+    rhs[i + 1] = mxGetCell(*array, i);
+  mexCallMATLAB(1, &new_array, (1 + size), rhs, "cat");
+  mxDestroyArray(rhs[0]);
+  mxFree(rhs);
+  mxDestroyArray(*array);
+  *array = new_array;
+}
+
 void TryMergeCellToNDArray(mxArray** array) {
   int size = mxGetNumberOfElements(*array);
   if (!size)
@@ -1133,13 +1156,15 @@ void TryMergeCellToNDArray(mxArray** array) {
       MergeStructArrays(array);
       break;
     default:
+      if (mxIsClass(element, "bson.date"))
+        MergeDateArrays(array);
       break;
   }
 }
 
 /** Convert a BSON array to an appropriate MxArray type.
  */
-mxArray* ConvertBSONArrayToMxArray(bson_iterator* it) {
+mxArray* ConvertBSONIteratorToMxArray(bson_iterator* it) {
   mxArray* element = NULL;
   bson_iterator iterator_copy = *it;
   // Check the array type.
@@ -1204,7 +1229,7 @@ static mxArray* ConvertNextToMxArray(bson_iterator* it) {
     case BSON_ARRAY: {
       bson_iterator sub_iterator;
       bson_iterator_subiterator(it, &sub_iterator);
-      element = ConvertBSONArrayToMxArray(&sub_iterator);
+      element = ConvertBSONIteratorToMxArray(&sub_iterator);
       break;
     }
     case BSON_BINDATA: {
@@ -1240,14 +1265,18 @@ static mxArray* ConvertNextToMxArray(bson_iterator* it) {
       break;
     case BSON_DATE:{
       bson_date_t date_value = bson_iterator_date(it);
-      double date_number = ((double)date_value / 86400.0) + 719529;
-      element = mxCreateDoubleScalar(date_number);
+      mxArray* date_number = mxCreateDoubleScalar(
+          ((double)date_value / 86400.0) + 719529);
+      mexCallMATLAB(1, &element, 1, &date_number, "bson.date");
+      mxDestroyArray(date_number);
       break;
     }
     case BSON_TIMESTAMP: {
       time_t time_value = bson_iterator_time_t(it);
-      double date_number = ((double)time_value / 86400.0) + 719529;
-      element = mxCreateDoubleScalar(date_number);
+      mxArray* date_number = mxCreateDoubleScalar(
+          ((double)time_value / 86400.0) + 719529);
+      mexCallMATLAB(1, &element, 1, &date_number, "bson.date");
+      mxDestroyArray(date_number);
       break;
     }
     case BSON_LONG:
@@ -1278,30 +1307,6 @@ bool ConvertMxArrayToBSON(const mxArray* input, int flags, bson* output) {
 bool ConvertBSONToMxArray(const bson* input, mxArray** output) {
   bson_iterator it;
   bson_iterator_init(&it, input);
-  *output = ConvertBSONArrayToMxArray(&it);
+  *output = ConvertBSONIteratorToMxArray(&it);
   return *output != NULL;
-}
-
-void EncodeBSON(const mxArray* input, int flags, mxArray** output) {
-  bson value;
-  if (!ConvertMxArrayToBSON(input, flags, &value))
-    mexErrMsgIdAndTxt("bsonmex:error", bson_first_errormsg(&value));
-  int size = bson_size(&value);
-  *output = mxCreateNumericMatrix(1, size, mxUINT8_CLASS, mxREAL);
-  memcpy(mxGetData(*output), bson_data(&value), size);
-  bson_destroy(&value);
-}
-
-void DecodeBSON(const mxArray* input, mxArray** output) {
-  bson value;
-  int size = mxGetNumberOfElements(input);
-  char* data = (char*)bson_malloc(size * sizeof(char));
-  memcpy(data, mxGetData(input), size * sizeof(char));
-  if (bson_init_finished_data(&value, data) != BSON_OK) {
-    bson_free(data);
-    mexErrMsgIdAndTxt("bsonmex:error", bson_first_errormsg(&value));
-  }
-  if (!ConvertBSONToMxArray(&value, output))
-    mexErrMsgIdAndTxt("bsonmex:error", bson_first_errormsg(&value));
-  bson_destroy(&value);
 }

@@ -1,4 +1,6 @@
-/// Helper library.
+/// Matlab EJDB helper.
+///
+/// Kota Yamaguchi 2013
 
 #ifndef __EJDBMEX_H__
 #define __EJDBMEX_H__

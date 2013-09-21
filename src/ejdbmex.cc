@@ -1,3 +1,7 @@
+/// Matlab EJDB helper implementation.
+/// 
+/// Kota Yamaguchi 2013
+
 #include "bsonmex.h"
 #include "ejdb.h"
 #include "ejdbmex.h"
@@ -107,7 +111,7 @@ bool Database::find(EJCOLL* collection,
     }
     bson_iterator it;
     bson_iterator_from_buffer(&it, (const char*)result_data);
-    mxArray* value = ConvertBSONArrayToMxArray(&it);
+    mxArray* value = ConvertBSONIteratorToMxArray(&it);
     if (!value) {
       ejdbqresultdispose(result_list);
       ejdbquerydel(ejdb_query);
