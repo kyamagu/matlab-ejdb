@@ -5,7 +5,6 @@
 #ifndef __EJDBMEX_H__
 #define __EJDBMEX_H__
 
-#include <mex.h>
 #include "mex/session.h"
 #include <string>
 

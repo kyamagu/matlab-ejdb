@@ -5,6 +5,7 @@
 #include "bsonmex.h"
 #include "ejdb.h"
 #include "ejdbmex.h"
+#include <mex.h>
 
 namespace ejdbmex {
 
