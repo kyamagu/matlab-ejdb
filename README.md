@@ -12,7 +12,6 @@ _Required tools/system libraries:_
 
  * g++/gcc
  * Matlab
- * EJDB C library libtcejdb-dev
 
 Launch matlab, add a path to `matlab-ejdb`, and use `ejdb.make` command.
 
@@ -21,15 +20,15 @@ addpath /path/to/matlab-ejdb;
 ejdb.make
 ```
 
-If you have a local ejdb package, you can link statically. Assuming the package
-is located at `/path/to/ejdb`:
+By default, this will download the latest EJDB package from GitHub and create
+a statically linked binary. If you prefer to link dynamically, specify
+`--download-ejdb` to false and pass any additional flags. For example,
 
 ```Matlab
-!make -C /path/to/ejdb
-ejdb.make('--libtcejdb-path', '/path/to/ejdb/tcejdb/libtcejdb.a', ...
-          '-I/path/to/ejdb/tcejdb');
+ejdb.make('--download-ejdb', false, ...
+          '-I/opt/local/include', ...
+          '-L/opt/local/lib');
 ```
-
 
 One snippet intro
 -----------------

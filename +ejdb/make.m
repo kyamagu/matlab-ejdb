@@ -4,24 +4,31 @@ function make(varargin)
 %    ejdb.make(['optionName', optionValue,] [compiler_flags])
 %
 % ejdb.make builds a mex file for the ejdb driver. The make script
-% accepts a path option and compiler flags for the mex command.
+% accepts a few options as well as compiler flags for the mex command.
 % See below for the supported build options.
 %
 % Options:
 %
-%    Option name       Value
+%    Option name       Description
 %    ----------------  -------------------------------------------------
-%    --libtcejdb-path  path to libejdb.a
+%    --download-ejdb   logical flag of whether to download ejdb source.
+%    --libtcejdb-path  path to libejdb.a.
 %
 % Example:
 %
-% Specifying additional paths.
+% Default to automatically download the EJDB package from GitHub and
+% statically link to the EJDB binary.
 %
-% >> ejdb.make('-I/opt/local/include', '-L/opt/local/lib');
+% >> ejdb.make();
 %
-% Specifying library files.
+% Dynamic linking to the system EJDB library.
 %
-% >> ejdb.make('--libtcejdb-path', '/opt/local/lib/libtcejdb.a', ...
+% >> ejdb.make('--download-ejdb', false);
+%
+% Static linking to the user-built EJDB binary.
+%
+% >> ejdb.make('--download-ejdb', false, ...
+%              '--libtcejdb-path', '/opt/local/lib/libtcejdb.a', ...
 %              '-I/opt/local/include');
 %
 % See also mex
@@ -36,7 +43,11 @@ function make(varargin)
     };
   source_files = setdiff(find_source_files(fullfile(root_dir, 'src')), ...
                          api_files);
-  [config, compiler_flags] = parse_options(varargin{:});
+  config = parse_options(varargin{:});
+  if config.download_ejdb
+    config = download_ejdb(root_dir, config);
+  end
+
   for i = 1:numel(targets)
     [outdir, output] = fileparts(targets{i});
     cmd = sprintf('mex -largeArrayDims%s %s -outdir %s -output %s %s%s -lz', ...
@@ -45,27 +56,56 @@ function make(varargin)
                   outdir, ...
                   output, ...
                   config.libtcejdb_path, ...
-                  compiler_flags ...
+                  config.compiler_flags ...
                   );
     disp(cmd);
     eval(cmd);
   end
 end
 
-function [config, compiler_flags] = parse_options(varargin)
+function config = parse_options(varargin)
 %PARSE_OPTIONS Parse build options.
+  config.download_ejdb = true;
   config.libtcejdb_path = '-ltcejdb';
   mark_for_delete = false(size(varargin));
   for i = 1:2:numel(varargin)
     if strcmp(varargin{i}, '--libtcejdb-path')
       config.libtcejdb_path = varargin{i+1};
       mark_for_delete(i:i+1) = true;
+    elseif strcmp(varargin{i}, '--download-ejdb')
+      config.download_ejdb = logical(varargin{i+1});
+      mark_for_delete(i:i+1) = true;
     end
   end
   compiler_flags = sprintf(' %s', varargin{~mark_for_delete});
   if isunix
-    compiler_flags = sprintf(' CFLAGS="$CFLAGS -fPIC -std=c99"%s', compiler_flags);
+    compiler_flags = sprintf(' CFLAGS="$CFLAGS -fPIC -std=c99"%s', ...
+                             compiler_flags);
   end
+  config.compiler_flags = compiler_flags;
+end
+
+function config = download_ejdb(root_dir, config)
+%DOWNLOAD_EJDB Download the latest EJDB package from GitHub.
+  github_url = 'https://github.com/Softmotions/ejdb/archive/master.zip';
+  zip_file = fullfile(root_dir, 'ejdb-master.zip');
+  disp(['Downloading ', github_url]);
+  urlwrite(github_url, zip_file);
+  disp(['Extracting ' zip_file]);
+  unzip(zip_file);
+  delete(zip_file);
+  cmd = sprintf('make -C %s', fullfile(root_dir, 'ejdb-master'));
+  disp(cmd);
+  system(cmd);
+  config.libtcejdb_path = fullfile(root_dir, ...
+                                   'ejdb-master', ...
+                                   'tcejdb', ...
+                                   'libtcejdb.a');
+  config.compiler_flags = sprintf(' -I%s %s', ...
+                                  fullfile(root_dir, ...  
+                                           'ejdb-master', ...
+                                           'tcejdb'), ...
+                                  config.compiler_flags);
 end
 
 function files = find_source_files(root_dir)
