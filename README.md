@@ -45,11 +45,11 @@ by comparing the output of `ldd` tool in the UNIX shell and in Matlab.
 
 From the UNIX shell,
 
-    $ ldd +sqlite3/private/libsqlite3_.mex*
+    $ ldd +ejdb/private/libejdbmex.mex*
 
 From Matlab shell,
 
-    >> !ldd +sqlite3/private/libsqlite3_.mex*
+    >> !ldd +ejdb/private/libejdbmex.mex*
 
 And find a dependent library differing in Matlab. You must append that library
 in the `LD_PRELOAD` path.
