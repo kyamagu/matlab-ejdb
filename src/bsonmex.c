@@ -314,7 +314,7 @@ static bool ConvertStructArrayToBSON(const mxArray* input,
       const char* field_name = mxGetFieldNameByNumber(input, i);
       // Convert string to OID only if a scalar struct with id field.
       if (name == NULL &&
-          strcmp(field_name, "id") == 0 &&
+          strcmp(field_name, "id_") == 0 &&
           mxIsChar(element) &&
           mxGetNumberOfElements(element) == 12) {
         if (!ConvertStringToOID(element, output))
@@ -844,21 +844,28 @@ static char** CreateSafeKeys(int size, const char* keys[]) {
     const char* input = keys[i];
     char* output = buffer;
     memset(buffer, 0, 64 * sizeof(char));
-    // variable name: [a-zA-Z][a-zA-Z0-9_]*
-    // Trim leading non-alphanumeric.
-    while (*input && !isalnum(*input))
-      ++input;
-    // If starting from numeric, prepend 'x'.
-    if (*input && isdigit(*input))
-      *output++ = 'x';
-    while (*input && output < &buffer[63]) {
-      if (isalnum(*input))
-        *output++ = *input++;
-      else {
-        // Convert any consecutive non-alphanumeric to underscore.
-        *output++ = '_';
-        while (*input && !isalnum(*input))
-          ++input;
+    // Special case: oid maps to "id_" field.
+    if (strcmp(input, "_id") == 0) {
+      strcpy(output, "id_");
+      output += strlen(output);
+    }
+    else {
+      // variable name: [a-zA-Z][a-zA-Z0-9_]*
+      // Trim leading non-alphanumeric.
+      while (*input && !isalnum(*input))
+        ++input;
+      // If starting from numeric, prepend 'x'.
+      if (*input && isdigit(*input))
+        *output++ = 'x';
+      while (*input && output < &buffer[63]) {
+        if (isalnum(*input))
+          *output++ = *input++;
+        else {
+          // Convert any consecutive non-alphanumeric to underscore.
+          *output++ = '_';
+          while (*input && !isalnum(*input))
+            ++input;
+        }
       }
     }
     // If empty, name it 'x'.

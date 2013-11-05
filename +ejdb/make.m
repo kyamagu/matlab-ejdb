@@ -87,14 +87,17 @@ end
 
 function config = download_ejdb(root_dir, config)
 %DOWNLOAD_EJDB Download the latest EJDB package from GitHub.
-  github_url = 'https://github.com/Softmotions/ejdb/archive/master.zip';
-  zip_file = fullfile(root_dir, 'ejdb-master.zip');
-  disp(['Downloading ', github_url]);
-  urlwrite(github_url, zip_file);
-  disp(['Extracting ' zip_file]);
-  unzip(zip_file);
-  delete(zip_file);
-  cmd = sprintf('make -C %s', fullfile(root_dir, 'ejdb-master'));
+  ejdb_dir = fullfile(root_dir, 'ejdb-master');
+  if ~exist(ejdb_dir, 'dir')
+    github_url = 'https://github.com/Softmotions/ejdb/archive/master.zip';
+    zip_file = fullfile(root_dir, 'ejdb-master.zip');
+    disp(['Downloading ', github_url]);
+    urlwrite(github_url, zip_file);
+    disp(['Extracting ' zip_file]);
+    unzip(zip_file);
+    delete(zip_file);
+  end
+  cmd = sprintf('make -C %s', ejdb_dir);
   disp(cmd);
   system(cmd);
   config.libtcejdb_path = fullfile(root_dir, ...
