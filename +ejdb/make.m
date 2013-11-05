@@ -94,7 +94,7 @@ function config = download_ejdb(root_dir, config)
     disp(['Downloading ', github_url]);
     urlwrite(github_url, zip_file);
     disp(['Extracting ' zip_file]);
-    unzip(zip_file);
+    unzip(zip_file, root_dir);
     delete(zip_file);
   end
   cmd = sprintf('make -C %s', ejdb_dir);
