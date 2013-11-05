@@ -8,6 +8,7 @@
 #include "bsonmex.h"
 #include <ctype.h>
 #include <mex.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -648,7 +649,7 @@ static void ScanBSONObject(bson_iterator* it,
     const char* key_ptr = key;
     bool is_digit = true;
     while (*key_ptr != 0)
-      is_digit &= isdigit(*key_ptr++);
+      is_digit &= (isdigit(*key_ptr++) > 0);
     is_array = (is_digit) ? is_array & (*object_size - 1 == atol(key)) : false;
     // Check the array type from element.
     if (array_type) {
