@@ -146,16 +146,17 @@ static bool ConvertCharArrayToBSON(const mxArray* input,
                                    const char* name,
                                    bson* output) {
   mxArray* prhs[2];
-  prhs[0] = input;
+  prhs[0] = (mxArray*)input;
   prhs[1] = mxCreateString("UTF-8");
   mxArray* converted_input = NULL;
   mexCallMATLAB(1, &converted_input, 2, prhs, "unicode2native");
   size_t length = mxGetNumberOfElements(converted_input);
   char* value = (char*)mxGetData(converted_input);
-  if (!value)
+  if (length && !value)
     return false;
   bool status = bson_append_string_n(output,
-                                     (name) ? name : "0", value,
+                                     (name) ? name : "0",
+                                     value,
                                      length) == BSON_OK;
   mxDestroyArray(prhs[1]);
   mxDestroyArray(converted_input);
