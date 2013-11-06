@@ -148,7 +148,9 @@ static bool ConvertCharArrayToBSON(const mxArray* input,
   char* value = mxArrayToString(input);
   if (!value)
     return false;
-  bool status = bson_append_string(output, (name) ? name : "0", value) == BSON_OK;
+  bool status = bson_append_string_n(output,
+                                     (name) ? name : "0", value,
+                                     strlen(value)) == BSON_OK;
   mxFree(value);
   return status;
 }
