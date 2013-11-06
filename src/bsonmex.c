@@ -145,13 +145,20 @@ static bool ConvertLogicalArrayToBSON(const mxArray* input,
 static bool ConvertCharArrayToBSON(const mxArray* input,
                                    const char* name,
                                    bson* output) {
-  char* value = mxArrayToString(input);
+  mxArray* prhs[2];
+  prhs[0] = input;
+  prhs[1] = mxCreateString("UTF-8");
+  mxArray* converted_input = NULL;
+  mexCallMATLAB(1, &converted_input, 2, prhs, "unicode2native");
+  size_t length = mxGetNumberOfElements(converted_input);
+  char* value = (char*)mxGetData(converted_input);
   if (!value)
     return false;
   bool status = bson_append_string_n(output,
                                      (name) ? name : "0", value,
-                                     strlen(value)) == BSON_OK;
-  mxFree(value);
+                                     length) == BSON_OK;
+  mxDestroyArray(prhs[1]);
+  mxDestroyArray(converted_input);
   return status;
 }
 
