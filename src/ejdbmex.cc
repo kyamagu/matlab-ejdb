@@ -97,32 +97,39 @@ bool Database::find(EJCOLL* collection,
                                          &num_results,
                                          flags,
                                          NULL);
-  if (!result_list) {
+  if (flags == JBQRYCOUNT) {
     ejdbquerydel(ejdb_query);
-    return false;
+    *results = mxCreateDoubleScalar(num_results);
   }
-  *results = mxCreateCellMatrix(1, num_results);
-  for (int i = 0; i < num_results; ++i) {
-    int size = 0;
-    const void* result_data = ejdbqresultbsondata(result_list, i, &size);
-    if (!result_data) {
-      ejdbqresultdispose(result_list);
+  else {
+    if (!result_list) {
       ejdbquerydel(ejdb_query);
       return false;
     }
-    bson_iterator it;
-    bson_iterator_from_buffer(&it, (const char*)result_data);
-    mxArray* value = ConvertBSONIteratorToMxArray(&it);
-    if (!value) {
-      ejdbqresultdispose(result_list);
-      ejdbquerydel(ejdb_query);
-      return false;
+    num_results = (flags == JBQRYFINDONE && num_results > 1) ? 1 : num_results;
+    *results = mxCreateCellMatrix(1, num_results);
+    for (int i = 0; i < num_results; ++i) {
+      int size = 0;
+      const void* result_data = ejdbqresultbsondata(result_list, i, &size);
+      if (!result_data) {
+        ejdbqresultdispose(result_list);
+        ejdbquerydel(ejdb_query);
+        return false;
+      }
+      bson_iterator it;
+      bson_iterator_from_buffer(&it, (const char*)result_data);
+      mxArray* value = ConvertBSONIteratorToMxArray(&it);
+      if (!value) {
+        ejdbqresultdispose(result_list);
+        ejdbquerydel(ejdb_query);
+        return false;
+      }
+      mxSetCell(*results, i, value);
     }
-    mxSetCell(*results, i, value);
+    ejdbqresultdispose(result_list);
+    ejdbquerydel(ejdb_query);
+    TryMergeCellToNDArray(results);
   }
-  ejdbqresultdispose(result_list);
-  ejdbquerydel(ejdb_query);
-  TryMergeCellToNDArray(results);
   return true;
 }
 

@@ -55,6 +55,9 @@ function test1
     error('Error querying cows');
   end
 
+  assert(ejdb.count('parrots', {}) == 2);
+  assert(numel(ejdb.findOne('parrots', {})) == 1);
+
   ejdb.close(db_id);
 
   disp('CONGRATULATIONS!!! Test batch 1 has passed completely!');
